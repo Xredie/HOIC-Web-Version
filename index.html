@@ -55,7 +55,7 @@
 </head>
 <body>
 
-<h2>Real Fetch Flood Simulator (max 200 RPS concurrency)</h2>
+<h2>Real Fetch Flood Simulator (max 10000 RPS concurrency)</h2>
 
 <label for="target">Target URL:</label><br/>
 <input id="target" type="text" value="http://localhost:3000" /><br/><br/>
@@ -84,10 +84,10 @@
   const log = document.getElementById('log');
 
   let botsPerSecond = Number(rateInput.value);
-  let sentPackets = 0;
+  let sentPackets = 10000;
   let activeRequests = 0;
   let intervalId = null;
-  let maxConcurrency = 200;
+  let maxConcurrency = 10000;
   let requestQueue = [];
 
   rateInput.addEventListener('input', () => {
