@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>HOIC Simulator — Demo (safe)</title>
+<style>
+  /* Prosty styl inspirowany panelem HOIC */
+  :root{--bg:#0b0f17;--panel:#0f1720;--accent:#ff3b30;--muted:#9aa4b2}
+  body{margin:0;font-family:Inter,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(180deg,#05060a 0%, #0b0f17 100%);color:#e6eef6}
+  .wrap{max-width:1000px;margin:28px auto;padding:20px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:0 8px 30px rgba(0,0,0,0.6)}
+  h1{margin:0 0 10px;font-size:22px}
+  .row{display:flex;gap:16px;align-items:flex-start}
+  .col{flex:1;background:var(--panel);padding:14px;border-radius:8px;box-shadow:inset 0 -2px 6px rgba(0,0,0,0.4)}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+  input[type="text"], input[type="number"], select {width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+  .controls{display:flex;gap:8px;margin-top:10px}
+  button{background:var(--accent);border:none;color:white;padding:10px 12px;border-radius:8px;cursor:pointer;font-weight:600}
+  button.secondary{background:#2b3746}
+  .big-number{font-size:28px;font-weight:700;margin:6px 0}
+  .log{height:300px;overflow:auto;background:#071018;padding:10px;border-radius:6px;font-family:monospace;font-size:12px;color:#bfe9ff}
+  .stats{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px}
+  .stat{background:rgba(255,255,255,0.02);padding:8px;border-radius:6px;min-width:120px}
+  .footer{margin-top:12px;font-size:12px;color:var(--muted)}
+  .fake-packet{display:inline-block;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.03);margin-right:6px}
+  .danger{color:#ffb3b0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>HOIC — <span style="color:#ffd06b">Simulator</span> (bezpieczne demo)</h1>
+  <p class="footer">To jest *symulator*: UI i logi wyglądają jak oryginalne narzędzie, ale **nie są wysyłane żadne żądania**. Bezpieczne do hostowania na GitHub Pages.</p>
+
+  <div class="row" style="margin-top:14px">
+    <div class="col" style="flex:0.7">
+      <label>Target (symulacja)</label>
+      <input id="target" type="text" placeholder="https://example.com (tylko do symulacji)" value="https://example.com" />
+      
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <div style="flex:1">
+          <label>Method</label>
+          <select id="method">
+            <option>TCP</option>
+            <option>HTTP</option>
+            <option>UDP</option>
+            <option>ICMP</option>
+          </select>
+        </div>
+        <div style="width:140px">
+          <label>Intensity</label>
+          <input id="intensity" type="range" min="1" max="100" value="30" />
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <div style="flex:1">
+          <label>Number of bots</label>
+          <input id="bots" type="number" min="1" max="5000" value="120" />
+        </div>
+        <div style="width:140px">
+          <label>Threads / bot</label>
+          <input id="threads" type="number" min="1" max="50" value="8" />
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="startBtn">Fire!</button>
+        <button id="stopBtn" class="secondary" disabled>Stop</button>
+        <button id="resetBtn" class="secondary">Reset</button>
+        <button id="saveCfg" class="secondary">Save cfg</button>
+      </div>
+
+      <div class="stats" style="margin-top:12px">
+        <div class="stat">
+          <div style="font-size:11px;color:var(--muted)">Total packets (sim)</div>
+          <div id="pkt" class="big-number">0</div>
+        </div>
+        <div class="stat">
+          <div style="font-size:11px;color:var(--muted)">Simulated bandwidth</div>
+          <div id="bw" class="big-number">0 KB/s</div>
+        </div>
+        <div class="stat">
+          <div style="font-size:11px;color:var(--muted)">Active bots</div>
+          <div id="active" class="big-number">0</div>
+        </div>
+        <div class="stat">
+          <div style="font-size:11px;color:var(--muted)">Uptime</div>
+          <div id="uptime" class="big-number">00:00:00</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col" style="flex:0.5">
+      <label>Console / Log</label>
+      <div id="log" class="log" aria-live="polite">
+        <!-- logs appear here -->
+        <div style="color:#9aa4b2">[sim] ready. This is a safe simulator — no network traffic will be generated.</div>
+      </div>
+
+      <div style="margin-top:10px">
+        <label>Preset</label>
+        <select id="preset">
+          <option value="default">Default</option>
+          <option value="aggressive">Aggressive</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+
+      <div style="margin-top:10px;font-size:12px;color:var(--muted)">
+        <strong class="danger">Uwaga:</strong> by wykonać legalny test obciążeniowy, uzyskaj pisemną zgodę właściciela serwera i użyj narzędzi testowych dopuszczonych do tego celu (np. locust, wrk, k6) uruchomionych w kontrolowanym środowisku.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/*
+  HOIC Simulator
+  - Symuluje zachowanie panelu HOIC
+  - NIE wykonuje żadnych żądań sieciowych ani skryptów atakujących.
+  - Możesz hostować ten plik na GitHub Pages bez żadnego ryzyka.
+*/
+
+const startBtn = document.getElementById('startBtn');
+const stopBtn  = document.getElementById('stopBtn');
+const resetBtn = document.getElementById('resetBtn');
+const saveCfg  = document.getElementById('saveCfg');
+const logBox   = document.getElementById('log');
+const pktEl    = document.getElementById('pkt');
+const bwEl     = document.getElementById('bw');
+const activeEl = document.getElementById('active');
+const uptimeEl = document.getElementById('uptime');
+const preset   = document.getElementById('preset');
+
+let running = false;
+let totalPackets = 0;
+let simulatedBw = 0; // KB/s
+let activeBots = 0;
+let startTime = null;
+let simInterval = null;
+let uptimeTimer = null;
+
+function appendLog(msg, cls='') {
+  const d = new Date();
+  const t = d.toLocaleTimeString();
+  const el = document.createElement('div');
+  el.innerHTML = `<span style="color:#6fb0ff">[${t}]</span> ${msg}`;
+  if(cls) el.classList.add(cls);
+  logBox.appendChild(el);
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+function startSim() {
+  if (running) return;
+  running = true;
+  startBtn.disabled = true;
+  stopBtn.disabled = false;
+  startTime = Date.now();
+
+  // read params
+  const target = document.getElementById('target').value;
+  const method = document.getElementById('method').value;
+  const intensity = Number(document.getElementById('intensity').value);
+  const bots = Number(document.getElementById('bots').value);
+  const threads = Number(document.getElementById('threads').value);
+
+  activeBots = bots;
+  appendLog(`<span class="fake-packet">SIM</span> Launching simulated attack on <strong>${target}</strong> using <strong>${method}</strong> — ${bots} bots x ${threads} threads (intensity ${intensity})`);
+  appendLog(`Payload: [simulated] ${Math.max(64, Math.floor(intensity*8))} bytes per packet`);
+
+  // update UI initial
+  pktEl.textContent = totalPackets;
+  activeEl.textContent = activeBots;
+
+  // simulation interval: update counters, logs
+  simInterval = setInterval(() => {
+    // compute packet rate depending on intensity, bots, threads
+    const basePerBot = Math.max(1, Math.round(intensity / 10));
+    const packetsThisTick = basePerBot * activeBots * Math.max(1, Math.round(threads/4));
+
+    totalPackets += packetsThisTick;
+    // simulated bandwidth estimate (KB/s) -> packets * avg payload / 1024
+    const avgPayload = Math.max(64, Math.round(intensity*8));
+    simulatedBw = Math.round((packetsThisTick * avgPayload) / 1024);
+
+    pktEl.textContent = totalPackets.toLocaleString();
+    bwEl.textContent = simulatedBw.toLocaleString() + ' KB/s';
+    activeEl.textContent = activeBots.toLocaleString();
+
+    // emit a few log lines to mimic real tool
+    if(Math.random() < 0.6) {
+      appendLog(`Sent ${packetsThisTick} simulated packets [${avgPayload}B] — instantaneous ${simulatedBw} KB/s`);
+    } else {
+      // random status line
+      const codes = ['200 OK (sim)', '503 SERVICE UNAVAILABLE (sim)', 'RST (sim)', 'TIMEOUT (sim)'];
+      appendLog(`Response: ${codes[Math.floor(Math.random()*codes.length)]}`);
+    }
+  }, 1000);
+
+  // uptime timer
+  uptimeTimer = setInterval(() => {
+    const s = Math.floor((Date.now() - startTime) / 1000);
+    const hh = String(Math.floor(s/3600)).padStart(2,'0');
+    const mm = String(Math.floor((s%3600)/60)).padStart(2,'0');
+    const ss = String(s%60).padStart(2,'0');
+    uptimeEl.textContent = `${hh}:${mm}:${ss}`;
+  }, 1000);
+}
+
+function stopSim() {
+  if(!running) return;
+  running = false;
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+  clearInterval(simInterval);
+  clearInterval(uptimeTimer);
+  simInterval = null;
+  uptimeTimer = null;
+  appendLog('<span style="color:#ffd06b">[sim]</span> Stopped simulation.');
+  activeBots = 0;
+  activeEl.textContent = activeBots;
+}
+
+function resetSim() {
+  stopSim();
+  totalPackets = 0;
+  simulatedBw = 0;
+  pktEl.textContent = totalPackets;
+  bwEl.textContent = simulatedBw + ' KB/s';
+  uptimeEl.textContent = '00:00:00';
+  logBox.innerHTML = '<div style="color:#9aa4b2">[sim] ready. This is a safe simulator — no network traffic will be generated.</div>';
+}
+
+startBtn.addEventListener('click', startSim);
+stopBtn.addEventListener('click', stopSim);
+resetBtn.addEventListener('click', resetSim);
+saveCfg.addEventListener('click', () => {
+  const cfg = {
+    target: document.getElementById('target').value,
+    method: document.getElementById('method').value,
+    intensity: document.getElementById('intensity').value,
+    bots: document.getElementById('bots').value,
+    threads: document.getElementById('threads').value
+  };
+  localStorage.setItem('hoicSimCfg', JSON.stringify(cfg));
+  appendLog('[sim] Configuration saved to localStorage.');
+});
+
+// load saved
+window.addEventListener('load', () => {
+  const raw = localStorage.getItem('hoicSimCfg');
+  if(raw) {
+    try {
+      const cfg = JSON.parse(raw);
+      if(cfg.target) document.getElementById('target').value = cfg.target;
+      if(cfg.method) document.getElementById('method').value = cfg.method;
+      if(cfg.intensity) document.getElementById('intensity').value = cfg.intensity;
+      if(cfg.bots) document.getElementById('bots').value = cfg.bots;
+      if(cfg.threads) document.getElementById('threads').value = cfg.threads;
+      appendLog('[sim] Loaded saved configuration.');
+    } catch(e) { /* ignore */ }
+  }
+});
+
+// preset selector
+preset.addEventListener('change', () => {
+  const v = preset.value;
+  if(v === 'aggressive') {
+    document.getElementById('intensity').value = 90;
+    document.getElementById('bots').value = 800;
+    document.getElementById('threads').value = 20;
+  } else if(v === 'low') {
+    document.getElementById('intensity').value = 10;
+    document.getElementById('bots').value = 12;
+    document.getElementById('threads').value = 2;
+  } else {
+    document.getElementById('intensity').value = 30;
+    document.getElementById('bots').value = 120;
+    document.getElementById('threads').value = 8;
+  }
+  appendLog('[sim] Preset applied: ' + v);
+});
+</script>
+</body>
+</html>
